@@ -55,13 +55,22 @@ def wish():
     reply("I am Proton, how may I help you?")
 
 # Set Microphone parameters
-with sr.Microphone() as source:
-        r.energy_threshold = 500 
+_microphone = None
+try:
+    _microphone = sr.Microphone()
+    with _microphone as source:
+        r.energy_threshold = 500
         r.dynamic_energy_threshold = False
+except Exception as exc:
+    _microphone = None
+    print(f"Voice input disabled (microphone unavailable): {exc}")
 
 # Audio to String
 def record_audio():
-    with sr.Microphone() as source:
+    if _microphone is None:
+        return ""
+
+    with _microphone as source:
         r.pause_threshold = 0.8
         voice_data = ''
         audio = r.listen(source, phrase_time_limit=5)
@@ -237,6 +246,10 @@ while True:
         voice_data = record_audio()
 
     #process voice_data
+    if not voice_data:
+        time.sleep(0.1)
+        continue
+
     if 'proton' in voice_data:
         try:
             #Handle sys.exit()

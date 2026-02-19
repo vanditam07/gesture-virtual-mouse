@@ -27,7 +27,7 @@
 
   <div class="section">
     <h2>⚙️ Getting Started</h2>
-    <p><strong>Python Version:</strong> 3.8.5</p>
+    <p><strong>Python Version:</strong> 3.10+ (required for current MediaPipe 0.10.x)</p>
     <pre><code>git clone https://github.com/yourusername/gesture-virtual-mouse.git
 cd gesture-virtual-mouse
 pip install -r requirements.txt
@@ -38,18 +38,12 @@ python main.py</code></pre>
     <h2>📂 Code Structure</h2>
     <pre><code>gesture-virtual-mouse/
 ├── main.py
-├── gesture_controller/
-│   ├── hand_tracker.py
-│   ├── glove_detector.py
-│   ├── gesture_classifier.py
-│   └── mouse_controller.py
-├── voice_assistant/
-│   ├── proton.py
-│   ├── speech_recognizer.py
-│   └── command_executor.py
-├── utils/
-│   ├── config.py
-│   └── helpers.py
+├── src/
+│   ├── Gesture_Controller.py
+│   ├── Gesture_Controller_Gloved.py
+│   ├── Proton.py
+│   ├── app.py
+│   └── web/
 ├── resources/
 │   └── models/
 ├── requirements.txt
