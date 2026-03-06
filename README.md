@@ -35,6 +35,21 @@ python main.py</code></pre>
   </div>
 
   <div class="section">
+    <h2>🖐️ Gesture Mode Controls</h2>
+    <p>Run gesture mode with <code>python main.py --mode gesture</code>. A camera window will open.</p>
+    <ul>
+      <li><strong>Move cursor</strong>: show a <strong>V sign</strong> (index + middle finger spread).</li>
+      <li><strong>Drag</strong>: make a <strong>fist</strong> and move.</li>
+      <li><strong>Left click</strong>: show <strong>V</strong> (enables click flag), then show <strong>middle finger</strong> gesture.</li>
+      <li><strong>Right click</strong>: show <strong>V</strong>, then show <strong>index finger</strong> gesture.</li>
+      <li><strong>Double click</strong>: show <strong>V</strong>, then show <strong>two-fingers-closed</strong> gesture.</li>
+      <li><strong>Scroll / Volume / Brightness</strong>: pinch gestures (minor/major hand) as implemented.</li>
+      <li><strong>Exit</strong>: press <strong>Enter</strong> in the camera window.</li>
+    </ul>
+    <p>If you can't move the cursor, look at the on-screen HUD: it shows whether hands are detected and what gesture id is being computed.</p>
+  </div>
+
+  <div class="section">
     <h2>📂 Code Structure</h2>
     <pre><code>gesture-virtual-mouse/
 ├── main.py

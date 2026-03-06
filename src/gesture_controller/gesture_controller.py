@@ -51,6 +51,29 @@ def _draw_hand(frame_bgr, hand_result) -> None:
         cv2.circle(frame_bgr, p, 3, (0, 0, 255), -1)
 
 
+def _hud_line(frame_bgr, text: str, y: int) -> None:
+    cv2.putText(
+        frame_bgr,
+        text,
+        (10, y),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.55,
+        (255, 255, 255),
+        2,
+        cv2.LINE_AA,
+    )
+    cv2.putText(
+        frame_bgr,
+        text,
+        (10, y),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.55,
+        (0, 0, 0),
+        1,
+        cv2.LINE_AA,
+    )
+
+
 class GestureController:
     """
     Camera loop + MediaPipe Tasks hand landmarks + gesture-to-action mapping.
@@ -99,6 +122,7 @@ class GestureController:
                 handmajor.set_finger_state()
                 handminor.set_finger_state()
 
+                gest_name = None
                 if major_res is not None or minor_res is not None:
                     gest_name = handminor.get_gesture()
                     if gest_name == Gest.PINCH_MINOR:
@@ -111,6 +135,12 @@ class GestureController:
 
                 _draw_hand(frame, major_res)
                 _draw_hand(frame, minor_res)
+
+                _hud_line(frame, f"hands: major={'Y' if major_res else 'N'} minor={'Y' if minor_res else 'N'}", 20)
+                _hud_line(frame, f"gesture_id: {gest_name if gest_name is not None else '-'}   v_flag: {int(Controller.flag)}", 45)
+                _hud_line(frame, "Move: V sign (index+middle spread). Drag: fist.", 70)
+                _hud_line(frame, "Click (after V): middle=left, index=right, 2-fingers-closed=double", 95)
+                _hud_line(frame, "Exit: press Enter in this window", 120)
                 cv2.imshow("Gesture Controller", frame)
 
                 if cv2.waitKey(5) & 0xFF == 13:
