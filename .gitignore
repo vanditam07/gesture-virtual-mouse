@@ -172,3 +172,9 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# User-specific gesture settings (generated on first run)
+gesture_config.json
+
+# Auto-downloaded MediaPipe model
+src/models/
