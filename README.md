@@ -3,7 +3,7 @@
 
   <div class="section">
     <h2>🔍 Description</h2>
-    <p>This project simplifies human-computer interaction by utilizing state-of-the-art Machine Learning and Computer Vision to detect static and dynamic hand gestures using MediaPipe and CNN. It also includes a voice assistant named <strong>Proton</strong> to handle system operations via speech, all without requiring any special hardware. Compatible with Windows systems.</p>
+    <p>This project simplifies human-computer interaction by utilizing state-of-the-art Machine Learning and Computer Vision to detect static and dynamic hand gestures using MediaPipe and CNN. It also includes a voice assistant named <strong>Proton</strong> to handle system operations via speech, all without requiring any special hardware. It is compatible with Windows systems.</p>
   </div>
 
   <div class="section">
