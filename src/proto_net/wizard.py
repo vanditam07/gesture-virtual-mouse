@@ -27,14 +27,14 @@ _FONT = cv2.FONT_HERSHEY_SIMPLEX
 _WINDOW = "Personalisation Wizard"
 
 _GESTURE_INSTRUCTIONS = {
-    "PALM": "Open your hand wide, all fingers extended",
-    "V_GEST": "Extend index + middle finger in a V shape",
-    "FIST": "Close all fingers into a tight fist",
-    "MID": "Extend only your middle finger",
-    "INDEX": "Extend only your index finger (pointing)",
-    "TWO_FINGER_CLOSED": "Extend index + middle finger, held together",
-    "PINCH_MINOR": "Pinch thumb + index, other fingers open",
-    "PINCH_MAJOR": "Pinch thumb + index, other fingers curled",
+    "PALM": ("Idle / No Action", "Show the pose that means 'do nothing'"),
+    "V_GEST": ("Move Cursor", "Show the pose you want to use for moving the mouse"),
+    "FIST": ("Drag", "Show the pose you want to use for click-and-drag"),
+    "MID": ("Left Click", "Show the pose you want to use for left click"),
+    "INDEX": ("Right Click", "Show the pose you want to use for right click"),
+    "TWO_FINGER_CLOSED": ("Double Click", "Show the pose you want to use for double click"),
+    "PINCH_MINOR": ("Scroll", "Show the pose you want to use for scrolling"),
+    "PINCH_MAJOR": ("Volume / Brightness", "Show the pose for volume & brightness control"),
 }
 
 _MIN_SAMPLES = 10
@@ -90,31 +90,32 @@ class PersonalisationWizard:
         cls_idx: int,
         cls_name: str,
     ) -> Optional[np.ndarray]:
-        instruction = _GESTURE_INSTRUCTIONS.get(cls_name, cls_name)
-        self._show_prompt(cap, cls_idx, cls_name, instruction)
+        action_name, hint = _GESTURE_INSTRUCTIONS.get(cls_name, (cls_name, "Show your gesture"))
+        self._show_prompt(cap, cls_idx, action_name, hint)
 
-        if not self._countdown(cap, cls_name):
+        if not self._countdown(cap, action_name):
             return None
 
-        return self._capture_embeddings(cap, cls_name)
+        return self._capture_embeddings(cap, action_name)
 
     def _show_prompt(
-        self, cap: cv2.VideoCapture, cls_idx: int, cls_name: str, instruction: str
+        self, cap: cv2.VideoCapture, cls_idx: int, action_name: str, hint: str
     ) -> None:
-        """Show gesture name + instruction, wait for spacebar."""
+        """Show action name + hint, wait for spacebar."""
         while True:
             ok, frame = cap.read()
             if not ok:
                 continue
             frame = cv2.flip(frame, 1)
             overlay = frame.copy()
-            cv2.rectangle(overlay, (0, 0), (frame.shape[1], 120), (40, 40, 40), -1)
+            cv2.rectangle(overlay, (0, 0), (frame.shape[1], 140), (40, 40, 40), -1)
             cv2.addWeighted(overlay, 0.7, frame, 0.3, 0, frame)
 
-            header = f"Gesture {cls_idx + 1}/{NUM_GESTURE_CLASSES}:  {cls_name}"
+            header = f"Action {cls_idx + 1}/{NUM_GESTURE_CLASSES}:  {action_name}"
             cv2.putText(frame, header, (20, 35), _FONT, 0.8, (100, 220, 255), 2, cv2.LINE_AA)
-            cv2.putText(frame, instruction, (20, 70), _FONT, 0.55, (220, 220, 220), 1, cv2.LINE_AA)
-            cv2.putText(frame, "Press SPACE when ready  |  ESC to cancel", (20, 105), _FONT, 0.5, (150, 150, 255), 1, cv2.LINE_AA)
+            cv2.putText(frame, hint, (20, 70), _FONT, 0.55, (220, 220, 220), 1, cv2.LINE_AA)
+            cv2.putText(frame, "Use ANY hand pose you prefer for this action", (20, 100), _FONT, 0.48, (100, 255, 180), 1, cv2.LINE_AA)
+            cv2.putText(frame, "Press SPACE when ready  |  ESC to cancel", (20, 128), _FONT, 0.5, (150, 150, 255), 1, cv2.LINE_AA)
 
             cv2.imshow(_WINDOW, frame)
             key = cv2.waitKey(30) & 0xFF

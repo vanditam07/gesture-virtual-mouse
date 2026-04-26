@@ -72,12 +72,15 @@ class ProtoClassifier:
     def predict(self, feature_vector: np.ndarray) -> Tuple[Optional[int], float, str]:
         """Classify a single 77-dim feature vector.
 
+        Always returns the best-matching prototype class (no confidence gate).
+        The majority-vote window smooths out noisy frames.
+
         Returns
         -------
         (gest_int, confidence, source)
-            gest_int : Gest integer ID (from enums) or None if below threshold
+            gest_int : Gest integer ID (from enums), or None if no prototypes
             confidence : max softmax probability
-            source : "proto" if accepted, "low_conf" if below threshold
+            source : "proto"
         """
         if not self.is_ready:
             return None, 0.0, "no_prototypes"
@@ -90,9 +93,6 @@ class ProtoClassifier:
         confidence, cls_idx = probs.max(dim=-1)
         confidence = confidence.item()
         cls_idx = cls_idx.item()
-
-        if confidence < self._threshold:
-            return None, confidence, "low_conf"
 
         self._vote_buffer.append(cls_idx)
         voted_cls = max(set(self._vote_buffer), key=lambda c: list(self._vote_buffer).count(c))
