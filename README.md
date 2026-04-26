@@ -31,7 +31,9 @@
     <pre><code>git clone https://github.com/yourusername/gesture-virtual-mouse.git
 cd gesture-virtual-mouse
 pip install -r requirements.txt
+python scripts/bootstrap.py   # downloads models &amp; trains encoder (~2-3 min)
 python main.py</code></pre>
+    <p><em>The bootstrap step downloads the MediaPipe hand-landmarker model and trains the ProtoEncoder checkpoint into <code>src/models/</code>. You only need to run it once after cloning.</em></p>
   </div>
 
   <div class="section">

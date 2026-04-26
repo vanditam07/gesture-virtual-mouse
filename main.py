@@ -4,6 +4,26 @@ from pathlib import Path
 from typing import List, Optional
 
 
+_MODELS_DIR = Path(__file__).resolve().parent / "src" / "models"
+_REQUIRED_MODELS = ("hand_landmarker.task", "pretrained_encoder.pth")
+
+
+def _check_models() -> None:
+    """Warn clearly if model files are missing after a fresh clone."""
+    missing = [name for name in _REQUIRED_MODELS if not (_MODELS_DIR / name).exists()]
+    if not missing:
+        return
+
+    msg = (
+        "\n[ERROR] Required model files are missing:\n"
+        + "".join(f"  - src/models/{name}\n" for name in missing)
+        + "\nRun the bootstrap script first:\n"
+        + "    python scripts/bootstrap.py\n"
+        + "\nSee README.md for details.\n"
+    )
+    sys.exit(msg)
+
+
 class ProjectRunner:
     def __init__(self) -> None:
         self._repo_root = Path(__file__).resolve().parent
@@ -11,6 +31,7 @@ class ProjectRunner:
 
     def run(self, mode: str) -> None:
         self._ensure_src_on_path()
+        _check_models()
 
         if mode == "proton":
             self._run_proton()
