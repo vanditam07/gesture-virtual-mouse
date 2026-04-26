@@ -110,6 +110,8 @@ class GestureController:
         handminor = HandRecog(HLabel.MINOR)
         cfg = self._config
         trackbar = TrackbarUI(cfg, self._config_path)
+        proto_used_count = 0
+        rule_fallback_count = 0
 
         try:
             while GestureController.cap.isOpened() and GestureController.gc_mode:
@@ -152,6 +154,7 @@ class GestureController:
                             source = f"proto ({conf:.0%})"
                             Controller.handle_controls(gest_name, active_hand, cfg)
                             proto_used = True
+                            proto_used_count += 1
 
                     if not proto_used:
                         gest_name = handminor.get_gesture(cfg)
@@ -160,6 +163,7 @@ class GestureController:
                         else:
                             gest_name = handmajor.get_gesture(cfg)
                             Controller.handle_controls(gest_name, handmajor.hand_result, cfg)
+                        rule_fallback_count += 1
                 else:
                     Controller.prev_hand = None
 
@@ -167,9 +171,23 @@ class GestureController:
                 _draw_hand(frame, minor_res)
 
                 proto_status = "ACTIVE" if (self._proto_clf and self._proto_clf.is_ready) else "off"
+                total_classified = proto_used_count + rule_fallback_count
+                proto_ratio = (
+                    int((proto_used_count * 100) / total_classified)
+                    if total_classified > 0
+                    else 0
+                )
                 _hud_line(frame, f"hands: major={'Y' if major_res else 'N'}  minor={'Y' if minor_res else 'N'}", 20)
                 _hud_line(frame, f"gesture: {gest_name if gest_name is not None else '-'}  [{source}]  v_flag: {int(Controller.flag)}", 45)
-                _hud_line(frame, f"proto: {proto_status}  |  P = personalise  |  Enter = exit", 70)
+                _hud_line(
+                    frame,
+                    (
+                        f"proto: {proto_status}  used={proto_used_count}  "
+                        f"fallback={rule_fallback_count}  ({proto_ratio}% proto)"
+                    ),
+                    70,
+                )
+                _hud_line(frame, "P = personalise  |  Enter = exit", 95)
                 cv2.imshow("Gesture Controller", frame)
 
                 key = cv2.waitKey(5) & 0xFF

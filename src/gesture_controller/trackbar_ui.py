@@ -7,19 +7,26 @@ import numpy as np
 
 from .config import ALL_ACTIONS, GestureConfig, save_config
 
-_WINDOW = "Gesture Settings"
-_WIDTH = 480
-_ROW_H = 28
+_CTRL_WIN = "Gesture Controls"
+_INFO_WIN = "Settings Guide"
 _FONT = cv2.FONT_HERSHEY_SIMPLEX
-_FONT_SCALE = 0.45
-_THICK = 1
 
 _SLIDER_DEFS = [
-    ("Cursor Speed", "cursor_speed", 1, 30, 10.0, "x"),
-    ("Dead Zone", "dead_zone", 0, 100, 1, "px^2"),
-    ("Mid Range", "mid_range", 100, 2500, 1, "px^2"),
-    ("Debounce", "debounce_frames", 1, 10, 1, "frames"),
-    ("Pinch Sens.", "pinch_threshold", 1, 10, 10.0, ""),
+    ("Speed", "cursor_speed", 1, 30, 10.0, "x"),
+    ("DeadZn", "dead_zone", 0, 100, 1, "px\u00b2"),
+    ("MidRng", "mid_range", 100, 2500, 1, "px\u00b2"),
+    ("Dbnce", "debounce_frames", 1, 10, 1, "frames"),
+    ("Pinch", "pinch_threshold", 1, 10, 10.0, ""),
+]
+
+_TOGGLE_KEYS = [
+    ("MC", "move_cursor"),
+    ("DR", "drag"),
+    ("LC", "left_click"),
+    ("RC", "right_click"),
+    ("DC", "double_click"),
+    ("SC", "scroll"),
+    ("VB", "volume_brightness"),
 ]
 
 _ACTION_LABELS = {
@@ -32,128 +39,206 @@ _ACTION_LABELS = {
     "volume_brightness": "Vol / Bright",
 }
 
+_SLIDER_HELP = {
+    "cursor_speed": ("Cursor Speed", "How fast the cursor tracks your hand"),
+    "dead_zone": ("Dead Zone", "Ignores small hand jitter below this threshold"),
+    "mid_range": ("Mid Range", "Smooth acceleration zone before full speed"),
+    "debounce_frames": ("Debounce", "Frames a gesture must hold before it registers"),
+    "pinch_threshold": ("Pinch Sens.", "Sensitivity for pinch scroll / volume / brightness"),
+}
+
+_TOGGLE_HELP = {
+    "move_cursor": "V-gesture moves the mouse pointer",
+    "drag": "Fist gesture holds left-click and drags",
+    "left_click": "Middle finger triggers a left click",
+    "right_click": "Index finger triggers a right click",
+    "double_click": "Two fingers closed triggers a double click",
+    "scroll": "Minor-hand pinch scrolls vertically / horizontally",
+    "volume_brightness": "Major-hand pinch adjusts volume / brightness",
+}
+
 
 def _noop(_val: int) -> None:
     pass
 
 
-def _draw_panel(config: GestureConfig) -> np.ndarray:
-    """Render a settings summary image to display in the window."""
-    section_gap = 12
-    header_h = 30
-
-    n_sliders = len(_SLIDER_DEFS)
-    n_toggles = len(ALL_ACTIONS)
-    total_h = header_h + n_sliders * _ROW_H + section_gap + header_h + n_toggles * _ROW_H + 16
-
-    img = np.zeros((total_h, _WIDTH, 3), dtype=np.uint8)
-    img[:] = (40, 40, 40)
-
-    y = 0
-
-    # --- Sensitivity header ---
-    cv2.rectangle(img, (0, y), (_WIDTH, y + header_h), (70, 50, 50), -1)
-    cv2.putText(img, "SENSITIVITY", (10, y + 20), _FONT, 0.55, (180, 200, 255), 1, cv2.LINE_AA)
-    y += header_h
-
-    for label, attr, lo, hi, divisor, unit in _SLIDER_DEFS:
-        raw = getattr(config, attr)
-        display_val = f"{raw:.1f}" if isinstance(raw, float) else str(raw)
-        if unit:
-            display_val += f" {unit}"
-
-        frac = 0.0
-        if hi != lo:
-            raw_int = int(raw * divisor) if isinstance(divisor, float) else int(raw)
-            frac = max(0.0, min(1.0, (raw_int - lo) / (hi - lo)))
-
-        cv2.putText(img, label, (10, y + 18), _FONT, _FONT_SCALE, (200, 200, 200), _THICK, cv2.LINE_AA)
-
-        bar_x = 130
-        bar_w = _WIDTH - 130 - 80
-        bar_y = y + 8
-        bar_h = 12
-        cv2.rectangle(img, (bar_x, bar_y), (bar_x + bar_w, bar_y + bar_h), (80, 80, 80), -1)
-        fill_w = int(bar_w * frac)
-        cv2.rectangle(img, (bar_x, bar_y), (bar_x + fill_w, bar_y + bar_h), (100, 180, 255), -1)
-
-        cv2.putText(img, display_val, (_WIDTH - 75, y + 18), _FONT, _FONT_SCALE, (220, 220, 220), _THICK, cv2.LINE_AA)
-        y += _ROW_H
-
-    y += section_gap
-
-    # --- Toggles header ---
-    cv2.rectangle(img, (0, y), (_WIDTH, y + header_h), (50, 70, 50), -1)
-    cv2.putText(img, "GESTURE TOGGLES", (10, y + 20), _FONT, 0.55, (180, 255, 180), 1, cv2.LINE_AA)
-    y += header_h
-
-    for action in ALL_ACTIONS:
-        enabled = config.enabled_actions.get(action, True)
-        nice = _ACTION_LABELS.get(action, action)
-
-        dot_color = (80, 220, 80) if enabled else (80, 80, 80)
-        label_color = (220, 220, 220) if enabled else (120, 120, 120)
-        status = "ON" if enabled else "OFF"
-        status_color = (80, 220, 80) if enabled else (100, 100, 220)
-
-        cv2.circle(img, (20, y + 14), 6, dot_color, -1)
-        cv2.putText(img, nice, (34, y + 18), _FONT, _FONT_SCALE, label_color, _THICK, cv2.LINE_AA)
-        cv2.putText(img, status, (_WIDTH - 50, y + 18), _FONT, _FONT_SCALE, status_color, _THICK, cv2.LINE_AA)
-        y += _ROW_H
-
+def _draw_ctrl_strip() -> np.ndarray:
+    """Tiny image for the trackbar window so OpenCV has something to display."""
+    img = np.full((24, 300, 3), 50, dtype=np.uint8)
+    cv2.putText(img, "Adjust sliders above  |  See 'Settings Guide'",
+                (6, 16), _FONT, 0.36, (170, 170, 170), 1, cv2.LINE_AA)
     return img
 
 
+def _get_info_size():
+    """Get the info window's current image rect, or a default."""
+    try:
+        rect = cv2.getWindowImageRect(_INFO_WIN)
+        if rect[2] > 100 and rect[3] > 100:
+            return rect[2], rect[3]
+    except Exception:
+        pass
+    return 520, 700
+
+
+def _draw_info(config: GestureConfig, width: int, height: int) -> np.ndarray:
+    """Render the full settings guide panel, scaled to fit the window."""
+    n_sliders = len(_SLIDER_DEFS)
+    n_toggles = len(_TOGGLE_KEYS)
+    total_rows = 1 + n_sliders + 1 + n_toggles  # headers + items
+    content_units = total_rows * 2 + 2  # 2 lines per row + padding
+    row_h = max(20, height // content_units)
+
+    scale = row_h / 26.0
+    f_label = max(0.35, 0.44 * scale)
+    f_desc = max(0.30, 0.36 * scale)
+    f_header = max(0.40, 0.50 * scale)
+    f_val = max(0.35, 0.42 * scale)
+    pad = max(8, int(10 * scale))
+    bar_h = max(6, int(10 * scale))
+    dot_r = max(3, int(5 * scale))
+    gap = max(4, int(8 * scale))
+
+    total_h = max(height, (total_rows * row_h) + row_h)
+    img = np.full((total_h, width, 3), 40, dtype=np.uint8)
+    y = 0
+
+    # ── SENSITIVITY header ──
+    hdr_h = int(row_h * 0.7)
+    cv2.rectangle(img, (0, y), (width, y + hdr_h), (70, 50, 50), -1)
+    cv2.putText(img, "SENSITIVITY", (pad, y + hdr_h - int(6 * scale)),
+                _FONT, f_header, (180, 200, 255), 1, cv2.LINE_AA)
+    y += hdr_h + gap
+
+    bar_start = int(width * 0.28)
+    bar_end_x = int(width * 0.72)
+    val_col = int(width * 0.75)
+
+    for _tb_label, attr, lo, hi, divisor, unit in _SLIDER_DEFS:
+        full_name, desc = _SLIDER_HELP[attr]
+        raw = getattr(config, attr)
+        display = f"{raw:.1f}" if isinstance(raw, float) else str(raw)
+        if unit:
+            display += f" {unit}"
+
+        frac = 0.0
+        if hi != lo:
+            ri = int(raw * divisor) if isinstance(divisor, float) else int(raw)
+            frac = max(0.0, min(1.0, (ri - lo) / (hi - lo)))
+
+        line1_y = y + int(row_h * 0.45)
+        cv2.putText(img, full_name, (pad, line1_y),
+                    _FONT, f_label, (210, 210, 210), 1, cv2.LINE_AA)
+
+        bw = bar_end_x - bar_start
+        by = y + int(row_h * 0.2)
+        cv2.rectangle(img, (bar_start, by), (bar_start + bw, by + bar_h), (80, 80, 80), -1)
+        cv2.rectangle(img, (bar_start, by), (bar_start + int(bw * frac), by + bar_h), (100, 180, 255), -1)
+
+        cv2.putText(img, display, (val_col, line1_y),
+                    _FONT, f_val, (220, 220, 220), 1, cv2.LINE_AA)
+
+        line2_y = y + int(row_h * 0.85)
+        cv2.putText(img, desc, (pad + int(4 * scale), line2_y),
+                    _FONT, f_desc, (130, 130, 130), 1, cv2.LINE_AA)
+        y += row_h
+
+    y += gap
+
+    # ── GESTURE TOGGLES header ──
+    cv2.rectangle(img, (0, y), (width, y + hdr_h), (50, 70, 50), -1)
+    cv2.putText(img, "GESTURE TOGGLES", (pad, y + hdr_h - int(6 * scale)),
+                _FONT, f_header, (180, 255, 180), 1, cv2.LINE_AA)
+    y += hdr_h + gap
+
+    status_col = int(width * 0.82)
+
+    for _key, action in _TOGGLE_KEYS:
+        enabled = config.enabled_actions.get(action, True)
+        nice = _ACTION_LABELS.get(action, action)
+        desc = _TOGGLE_HELP.get(action, "")
+
+        dot_col = (80, 220, 80) if enabled else (80, 80, 80)
+        txt_col = (220, 220, 220) if enabled else (120, 120, 120)
+        status = "ON" if enabled else "OFF"
+        st_col = (80, 220, 80) if enabled else (100, 100, 220)
+
+        line1_y = y + int(row_h * 0.45)
+        cx = pad + dot_r + 2
+        cv2.circle(img, (cx, y + int(row_h * 0.35)), dot_r, dot_col, -1)
+        name_x = cx + dot_r + int(8 * scale)
+        cv2.putText(img, nice, (name_x, line1_y),
+                    _FONT, f_label, txt_col, 1, cv2.LINE_AA)
+        cv2.putText(img, status, (status_col, line1_y),
+                    _FONT, f_val, st_col, 1, cv2.LINE_AA)
+
+        line2_y = y + int(row_h * 0.85)
+        cv2.putText(img, desc, (name_x, line2_y),
+                    _FONT, f_desc, (130, 130, 130), 1, cv2.LINE_AA)
+        y += row_h
+
+    return img[:max(1, min(total_h, y + gap))]
+
+
 class TrackbarUI:
-    """OpenCV window with trackbars + a rendered settings summary panel."""
+    """Two-window UI: compact trackbar controls + a resizable info guide."""
 
     def __init__(self, config: GestureConfig, config_path: Path) -> None:
         self._config_path = config_path
+        self._last_size = (0, 0)
 
-        cv2.namedWindow(_WINDOW, cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
-        cv2.resizeWindow(_WINDOW, _WIDTH, 520)
+        cv2.namedWindow(_CTRL_WIN, cv2.WINDOW_NORMAL)
+        cv2.resizeWindow(_CTRL_WIN, 340, 620)
 
-        for label, attr, lo, hi, divisor, _unit in _SLIDER_DEFS:
+        for tb_label, attr, lo, hi, divisor, _unit in _SLIDER_DEFS:
             raw = getattr(config, attr)
-            initial = int(raw * divisor) if isinstance(divisor, float) else int(raw)
-            initial = max(lo, min(hi, initial))
-            cv2.createTrackbar(label, _WINDOW, initial, hi, _noop)
+            init = int(raw * divisor) if isinstance(divisor, float) else int(raw)
+            cv2.createTrackbar(tb_label, _CTRL_WIN, max(lo, min(hi, init)), hi, _noop)
 
-        for action in ALL_ACTIONS:
-            nice = _ACTION_LABELS.get(action, action)
-            cv2.createTrackbar(nice, _WINDOW, int(config.enabled_actions.get(action, True)), 1, _noop)
+        for key, action in _TOGGLE_KEYS:
+            cv2.createTrackbar(key, _CTRL_WIN, int(config.enabled_actions.get(action, True)), 1, _noop)
 
-        cv2.imshow(_WINDOW, _draw_panel(config))
+        cv2.imshow(_CTRL_WIN, _draw_ctrl_strip())
+
+        cv2.namedWindow(_INFO_WIN, cv2.WINDOW_NORMAL)
+        cv2.resizeWindow(_INFO_WIN, 520, 700)
+        w, h = _get_info_size()
+        self._last_size = (w, h)
+        cv2.imshow(_INFO_WIN, _draw_info(config, w, h))
 
     def sync(self, config: GestureConfig) -> bool:
-        """Read trackbar positions into *config*. Auto-saves and redraws on change."""
+        """Read trackbar values into *config*. Auto-saves & redraws on change."""
         changed = False
 
-        for label, attr, lo, hi, divisor, _unit in _SLIDER_DEFS:
-            raw_val = cv2.getTrackbarPos(label, _WINDOW)
-            if raw_val < lo:
-                raw_val = lo
+        for tb_label, attr, lo, hi, divisor, _unit in _SLIDER_DEFS:
+            raw_val = max(lo, cv2.getTrackbarPos(tb_label, _CTRL_WIN))
             value = raw_val / divisor if isinstance(divisor, float) else raw_val
             if getattr(config, attr) != value:
                 setattr(config, attr, value)
                 changed = True
 
-        for action in ALL_ACTIONS:
-            nice = _ACTION_LABELS.get(action, action)
-            val = bool(cv2.getTrackbarPos(nice, _WINDOW))
+        for key, action in _TOGGLE_KEYS:
+            val = bool(cv2.getTrackbarPos(key, _CTRL_WIN))
             if config.enabled_actions.get(action) != val:
                 config.enabled_actions[action] = val
                 changed = True
 
+        w, h = _get_info_size()
+        resized = (w, h) != self._last_size
+
         if changed:
             save_config(config, self._config_path)
-            cv2.imshow(_WINDOW, _draw_panel(config))
+
+        if changed or resized:
+            self._last_size = (w, h)
+            cv2.imshow(_INFO_WIN, _draw_info(config, w, h))
 
         return changed
 
     @staticmethod
     def destroy() -> None:
-        try:
-            cv2.destroyWindow(_WINDOW)
-        except cv2.error:
-            pass
+        for win in (_CTRL_WIN, _INFO_WIN):
+            try:
+                cv2.destroyWindow(win)
+            except cv2.error:
+                pass
